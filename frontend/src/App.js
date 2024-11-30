@@ -35,7 +35,7 @@ function App() {
         // Start periodic frame capture
         intervalId = setInterval(() => {
           captureAndClassify();
-        }, 3000); // Capture every second
+        }, 1000); // Capture every second
 
       } catch (err) {
         alert("Unable to access webcam. Please check your device settings.");
