@@ -2,23 +2,29 @@ import "./App.css";
 import { useState, useRef, useEffect } from "react";
 
 function App() {
-  const [image, setImage] = useState(null);
-  const [prediction, setPrediction] = useState(null);
-  const [predictedDataset, setPredictedDataset] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);  // To store the image preview URL
-  const [isModalOpen, setIsModalOpen] = useState(false);  // To control the modal visibility
+  const [image, setImage] = useState(null);   // store uploaded image
+  const [prediction, setPrediction] = useState(null);   // store predicted bin category
+  const [predictedDataset, setPredictedDataset] = useState(null);   // store predicted class
+  const [imagePreview, setImagePreview] = useState(null);  // store image preview URL for modal display
+  const [isModalOpen, setIsModalOpen] = useState(false);  // control the modal visibility
   const isModalOpenRef = useRef(isModalOpen); // ensure captureAndClassify gets latest state
-  const [isWebcamMode, setIsWebcamMode] = useState(false); // To toggle between webcam and image upload
+  const [isWebcamMode, setIsWebcamMode] = useState(false); // toggle between webcam and image upload
+
+  // refs for video and canvas elements
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
-  let streamRef = useRef(null); // Use Ref to hold the webcam stream
+
+  let streamRef = useRef(null); // ref to hold the webcam stream
   
 
+  // update ref when isModalOpen changes
   useEffect(() => {
     console.log("isModalOpen updated: ", isModalOpen);
     isModalOpenRef.current = isModalOpen;
   }, [isModalOpen]);
 
+
+  // manage webcam stream and capture frames
   useEffect(() => {
     let intervalId;
 
@@ -35,7 +41,7 @@ function App() {
         // Start periodic frame capture
         intervalId = setInterval(() => {
           captureAndClassify();
-        }, 1000); // Capture every second
+        }, 1000);
 
       } catch (err) {
         alert("Unable to access webcam. Please check your device settings.");
@@ -46,6 +52,7 @@ function App() {
     // Stop webcam stream when switching to upload mode
     const stopWebcam = () => {
       const stream = streamRef.current;
+
       if (stream) {
         const tracks = stream.getTracks();
         tracks.forEach(track => track.stop());
@@ -55,19 +62,22 @@ function App() {
     if (isWebcamMode) {
       startWebcam();
     } else {
-      stopWebcam(); // Stop webcam stream when switching to upload mode
+      stopWebcam();
     }
 
+    // cleanup 
     return () => {
-      stopWebcam(); // Cleanup on component unmount
+      stopWebcam();
       clearInterval(intervalId);
     };
   }, [isWebcamMode]);
 
-  const classify = async (e) => {
-    if (e) e.preventDefault(); // only call preventDefault if an event is passed
 
-    // Check if an image has been selected
+  // classify uploaded image or webcam frame
+  const classify = async (e) => {
+    if (e) e.preventDefault();
+
+    // Check if an image has been selected if in upload mode
     if (!image && !isWebcamMode) {
       alert("Please select an image.");
       return;
@@ -85,22 +95,22 @@ function App() {
 
         if (!canvas || !video) return;
 
+        // draw current from from video to canvas
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
-
         const ctx = canvas.getContext("2d");
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
+        // set url for image preview in modal view
         const blob = await getBlobFromCanvas(canvas);
         const dataUrl = canvas.toDataURL("image/jpeg");
-        setImagePreview(dataUrl); // Set the data URL as the modal preview image
+        setImagePreview(dataUrl);
 
-      
-        // Send webcam frame to backend for classification
-        // const imgFormData = new FormData();
+        // send webcam frame to backend for classification
         imgFormData.append("image", blob, "webcam-frame.jpg");
       }
-    
+      
+      // open the bin after classification
       imgFormData.append("open", "true");
 
       const response = await fetch("http://127.0.0.1:5000/classify", {
@@ -122,6 +132,8 @@ function App() {
     }
   };
 
+
+  // convert canvas content into a blob
   const getBlobFromCanvas = (canvas) => {
     return new Promise((resolve, reject) => {
       canvas.toBlob((blob) => {
@@ -134,26 +146,27 @@ function App() {
     });
   };
 
-  // Capture and classify images from webcam
+
+  // capture and classify images from webcam
   const captureAndClassify = async () => {
-    // console.log("hi!")
     console.log(isModalOpenRef.current);
     if (!isWebcamMode || isModalOpenRef.current) return;
-    // console.log(!isWebcamMode);
 
-    // console.log(isBinOpen);
-
+    // get references to canvas and video elements
     const canvas = canvasRef.current;
     const video = videoRef.current;
 
     if (!canvas || !video) return;
 
+    // set canvas dimensions to video frame dimensions
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
 
+    // draw the current video frame
     const ctx = canvas.getContext("2d");
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
+    // send canvas to be classified and update states
     try {
       const blob = await getBlobFromCanvas(canvas);
       
@@ -180,30 +193,30 @@ function App() {
     }
   };
 
+
+  // close modal and reset predictions
   const closeModal = () => {
-    setIsModalOpen(false);  // Close the modal
-    setPrediction(null); // Clear the prediction state
-    setPredictedDataset(null); // Clear the classified dataset
+    setIsModalOpen(false);
+    setPrediction(null);
+    setPredictedDataset(null);
   };
 
-  // Set image preview URL when the user selects a file
+
+  // handle file input changes by updating states
   const handleImageChange = (e) => {
     const selectedImage = e.target.files[0];
 
     if (selectedImage && selectedImage.type.startsWith('image/')) {
       setImage(selectedImage);
-      setImagePreview(URL.createObjectURL(selectedImage)); // Generate a preview URL
+      setImagePreview(URL.createObjectURL(selectedImage));
     } else {
       alert("Please select a valid image file.");
     }
-
-    // setImage(selectedImage);
-    // setImagePreview(URL.createObjectURL(selectedImage)); // Generate a preview URL
   };
 
 
+  // send API call to close all bins
   const closeBins = async () => {
-    // setIsBinOpen(false);
 
     try {
       const response = await fetch("http://127.0.0.1:5000/close_bins", {
@@ -222,15 +235,14 @@ function App() {
     }
   };
 
-  // Toggle between webcam and image upload modes
+
+  // toggle between webcam and image upload modes
   const toggleMode = () => {
     setIsWebcamMode(!isWebcamMode);
     setImage(null);
     setPrediction(null);
     setPredictedDataset(null);
   };
-
-  
 
   return (
     <div className="App">
@@ -247,10 +259,12 @@ function App() {
         <>
           <video className="video" ref={videoRef} autoPlay muted></video>
           <canvas ref={canvasRef} style={{ display: "none" }}></canvas>
+          
           {prediction && (
             <div className="prediction-display">
               <p><strong>Goes in as:</strong> {prediction}</p>
               <p><strong>Classified as:</strong> {predictedDataset}</p>
+
               <button className="blue-btn" onClick={classify}>Open Bin</button>
             </div>
           )}
@@ -258,6 +272,7 @@ function App() {
       ) : (
         <form onSubmit={classify} className="image-form">
           <label className="image-label">Enter image:</label>
+
           <input
             type="file"
             name="image"
@@ -265,6 +280,7 @@ function App() {
             onChange={handleImageChange}
             className="image-input"
           />
+          
           <input type="submit" className="blue-btn" />
         </form>
       )}
@@ -274,12 +290,15 @@ function App() {
         <div className="modal-overlay">
           <div className="modal-content">
             <h2>Prediction Result</h2>
+
             {/* Display uploaded image */}
             <div className="image-preview">
               <img src={imagePreview} alt="Uploaded" />
             </div>
+
             <p><strong>The image goes in:</strong> {prediction}</p>
             <p><strong>This image is classified as:</strong> {predictedDataset}</p>
+
             <button onClick={() => {closeModal(); closeBins();}}>Close</button>
           </div>
         </div>
