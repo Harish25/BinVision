@@ -89,11 +89,17 @@ def send_message(message):
 def classify():
     print('Req recieved')
     req_image = request.files['image']
+    req_open = request.form.get('open')
+    # print('req_open', req_open)
+
     processed_image = load_and_preprocess_image(req_image)
     predictions = model.predict(processed_image)
     predicted_class = np.argmax(predictions[0])
     bin_category = class_category[predicted_class]
-    send_message(open_message[bin_category])
+    
+    if req_open == "true":
+        send_message(open_message[bin_category])
+
     #print(class_category[predicted_class])
     return jsonify({"prediction": bin_category,
                     "class": class_dict[predicted_class]})
