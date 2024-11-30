@@ -45,6 +45,24 @@ function App() {
     setImagePreview(URL.createObjectURL(selectedImage)); // Generate a preview URL
   };
 
+  const closeBins = async () => {
+    try {
+      const response = await fetch("http://127.0.0.1:5000/close_bins", {
+        method: "POST",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log(data.message);
+      } else {
+        const errorData = await response.json();
+        console.error("Error:", errorData.message);
+      }
+    } catch (error) {
+      console.error("Network error:", error.message);
+    }
+  };
+
   return (
     <div className="App">
       {/* Title - BinVision */}
@@ -73,7 +91,7 @@ function App() {
             </div>
             <p><strong>The image goes in:</strong> {prediction}</p>
             <p><strong>This image is classified as:</strong> {predictedDataset}</p>
-            <button onClick={closeModal}>Close</button>
+            <button onClick={() => {closeModal(); closeBins();}}>Close</button>
           </div>
         </div>
       )}
