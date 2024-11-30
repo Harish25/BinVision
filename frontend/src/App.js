@@ -238,20 +238,20 @@ function App() {
       <h1 className="app-title">BinVision</h1>
 
       {/* Mode Toggle Button */}
-      <button onClick={toggleMode} className="mode-toggle-btn">
+      <button onClick={toggleMode} className="gray-btn">
         {isWebcamMode ? "Switch to Upload Mode" : "Switch to Webcam Mode"}
       </button>
 
       {/* Display either webcam or file upload mode*/}
       {isWebcamMode ? (
         <>
-          <video ref={videoRef} autoPlay muted></video>
+          <video className="video" ref={videoRef} autoPlay muted></video>
           <canvas ref={canvasRef} style={{ display: "none" }}></canvas>
           {prediction && (
             <div className="prediction-display">
-              <p><strong>Goes in:</strong> {prediction}</p>
+              <p><strong>Goes in as:</strong> {prediction}</p>
               <p><strong>Classified as:</strong> {predictedDataset}</p>
-              <button onClick={classify}>Open Bin</button>
+              <button className="blue-btn" onClick={classify}>Open Bin</button>
             </div>
           )}
         </>
@@ -265,12 +265,9 @@ function App() {
             onChange={handleImageChange}
             className="image-input"
           />
-          <input type="submit" className="submit-btn" />
+          <input type="submit" className="blue-btn" />
         </form>
       )}
-
-      
-
 
       {/* Modal for displaying the prediction results */}
       {isModalOpen && (
