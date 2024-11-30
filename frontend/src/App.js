@@ -7,10 +7,17 @@ function App() {
   const [predictedDataset, setPredictedDataset] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);  // To store the image preview URL
   const [isModalOpen, setIsModalOpen] = useState(false);  // To control the modal visibility
+  const isModalOpenRef = useRef(isModalOpen); // ensure captureAndClassify gets latest state
   const [isWebcamMode, setIsWebcamMode] = useState(false); // To toggle between webcam and image upload
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   let streamRef = useRef(null); // Use Ref to hold the webcam stream
+  
+
+  useEffect(() => {
+    console.log("isModalOpen updated: ", isModalOpen);
+    isModalOpenRef.current = isModalOpen;
+  }, [isModalOpen]);
 
   useEffect(() => {
     let intervalId;
@@ -28,7 +35,7 @@ function App() {
         // Start periodic frame capture
         intervalId = setInterval(() => {
           captureAndClassify();
-        }, 1000); // Capture every second
+        }, 3000); // Capture every second
 
       } catch (err) {
         alert("Unable to access webcam. Please check your device settings.");
@@ -61,16 +68,41 @@ function App() {
     if (e) e.preventDefault(); // only call preventDefault if an event is passed
 
     // Check if an image has been selected
-    if (!image) {
+    if (!image && !isWebcamMode) {
       alert("Please select an image.");
       return;
     }
 
-    const imgFormData = new FormData();
-    imgFormData.append("image", image);
-    imgFormData.append("open", "true");
-
     try {
+      const imgFormData = new FormData();
+
+      if (!isWebcamMode) {
+        imgFormData.append("image", image);
+      }
+      else {
+        const canvas = canvasRef.current;
+        const video = videoRef.current;
+
+        if (!canvas || !video) return;
+
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        const blob = await getBlobFromCanvas(canvas);
+        const dataUrl = canvas.toDataURL("image/jpeg");
+        setImagePreview(dataUrl); // Set the data URL as the modal preview image
+
+      
+        // Send webcam frame to backend for classification
+        // const imgFormData = new FormData();
+        imgFormData.append("image", blob, "webcam-frame.jpg");
+      }
+    
+      imgFormData.append("open", "true");
+
       const response = await fetch("http://127.0.0.1:5000/classify", {
         method: "POST",
         body: imgFormData,
@@ -105,7 +137,8 @@ function App() {
   // Capture and classify images from webcam
   const captureAndClassify = async () => {
     // console.log("hi!")
-    if (!isWebcamMode) return;
+    console.log(isModalOpenRef.current);
+    if (!isWebcamMode || isModalOpenRef.current) return;
     // console.log(!isWebcamMode);
 
     // console.log(isBinOpen);
@@ -218,6 +251,7 @@ function App() {
             <div className="prediction-display">
               <p><strong>Goes in:</strong> {prediction}</p>
               <p><strong>Classified as:</strong> {predictedDataset}</p>
+              <button onClick={classify}>Open Bin</button>
             </div>
           )}
         </>
