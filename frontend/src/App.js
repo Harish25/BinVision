@@ -11,6 +11,12 @@ function App() {
   const classify = async (e) => {
     e.preventDefault();
 
+    // Check if an image has been selected
+    if (!image) {
+      alert("Please select an image.");
+      return;
+    }
+
     const imgFormData = new FormData();
     imgFormData.append("image", image);
 
@@ -41,8 +47,16 @@ function App() {
   // Set image preview URL when the user selects a file
   const handleImageChange = (e) => {
     const selectedImage = e.target.files[0];
-    setImage(selectedImage);
-    setImagePreview(URL.createObjectURL(selectedImage)); // Generate a preview URL
+
+    if (selectedImage && selectedImage.type.startsWith('image/')) {
+      setImage(selectedImage);
+      setImagePreview(URL.createObjectURL(selectedImage)); // Generate a preview URL
+    } else {
+      alert("Please select a valid image file.");
+    }
+
+    // setImage(selectedImage);
+    // setImagePreview(URL.createObjectURL(selectedImage)); // Generate a preview URL
   };
 
   const closeBins = async () => {
